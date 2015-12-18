@@ -18,7 +18,11 @@ class Cache;
 
 class Texture {
  public:
-  static std::unique_ptr<Texture> Create(ETextureType type, int width, int height);
+  static std::unique_ptr<Texture> Create(ETextureType type,
+                                         int width, int height);
+  static std::unique_ptr<Texture> Create(ETextureType type,
+                                         const char *metadata_filename,
+                                         const char *vis_filename);
   virtual ~Texture() { }
 
   virtual void Access(int x, int y, Cache *c) const = 0;

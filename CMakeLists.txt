@@ -45,3 +45,4 @@ SET(HEADERS
 )
 
 ADD_EXECUTABLE(cache-sim ${HEADERS} ${SOURCES})
+ADD_EXECUTABLE(split split.cpp)

@@ -1,14 +1,14 @@
 #include <iostream>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include <cassert>
+#include <cstring>
 
 #include "cache.h"
 #include "texture.h"
 #include "access_pattern.h"
 
 static void PrintUsageAndExit() {
-  std::cerr << "Usage: <metadata_file | <ASTC4x4|ASTC8x8|ASTCx4|ASTC4x4> w h" << std::endl;
+  std::cerr << "Usage: <<4x4|12x12> metadata_file vis_file | <ASTC4x4|ASTC8x8|ASTCx4|ASTC4x4> w h" << std::endl;
   exit(1);
 }
 
@@ -32,13 +32,18 @@ int main(int argc, char **argv) {
     } else if(std::string(argv[1]) == std::string("ASTC12x12")) {
       tex = Texture::Create(eTextureType_ASTC12x12, w, h);
     }
+  } else if (strncmp(argv[1], "4x4", 3) == 0) {
+
+    if (argc != 4) { PrintUsageAndExit(); }
+    tex = Texture::Create(eTextureType_Adaptive4x4, argv[2], argv[3]);
+
+  } else if (strncmp(argv[1], "12x12", 5) == 0) {
+
+    if (argc != 4) { PrintUsageAndExit(); }
+    tex = Texture::Create(eTextureType_Adaptive12x12, argv[2], argv[3]);
+
   } else {
-
-    if (argc != 2) { PrintUsageAndExit(); }
-
-    // Parse metadata file...
-    // Build metadata
-    // std::unique_ptr<Metadata> = Metadata::Create(metadata_type);
+    PrintUsageAndExit();
   }
 
   // 1KB cache...

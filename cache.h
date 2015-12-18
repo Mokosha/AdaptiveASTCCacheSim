@@ -31,6 +31,27 @@ class Cache {
     , _time_point(0)
     { }
 
+  void Access(size_t address, size_t num_bytes) {
+    if (num_bytes == 1) {
+      Access(address);
+    } else if (num_bytes > 1) {
+      size_t end_address = address + num_bytes - 1;
+
+      // Align the two addresses to 64 byte boundary...
+      address = (address >> 6) << 6;
+      end_address = (end_address >> 6) << 6;
+
+      Access(address);
+      while (address != end_address) {
+        assert(end_address > address);
+        assert((end_address - address) % 64 == 0);
+
+        Access(address);
+        address += 64;
+      }
+    }
+  }
+
   void Access(size_t address) {
     _time_point++;
     _num_accesses++;
