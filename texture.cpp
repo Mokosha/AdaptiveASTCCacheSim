@@ -244,8 +244,8 @@ class Metadata12x12Texture : public Texture {
                        int num_channels, const unsigned char *vis_image_data)
     : Texture(width, height)
     , _next_block_idx(0)
-    , _num_blocks_x((width + 3) / 4)
-    , _num_blocks_y((height + 3) / 4)
+    , _num_blocks_x((width + 11) / 12)
+    , _num_blocks_y((height + 11) / 12)
     , _metadata(_num_blocks_x * _num_blocks_y, MetadataEntry()) {
 
     int blocks_written = 0;
@@ -279,8 +279,8 @@ class Metadata12x12Texture : public Texture {
 
   virtual void Access(int x, int y, Cache *c) const {
     // Get the block index
-    int block_x = x / 4;
-    int block_y = y / 4;
+    int block_x = x / 12;
+    int block_y = y / 12;
 
     // The block offset
     int block_idx = block_y * _num_blocks_x + block_x;
@@ -299,29 +299,30 @@ class Metadata12x12Texture : public Texture {
 
  private:
 
-  static const int kRed = 0xFF0000FF;
-  static const int kGreen = 0xFF00FF00;
-  static const int kBlue = 0xFFFF0000;
-  static const int kYellow = 0xFF00FFFF;
+  static const uint32_t kRed = 0xFF0000FF;
+  static const uint32_t kGreen = 0xFF00FF00;
+  static const uint32_t kBlue = 0xFFFF0000;
+  static const uint32_t kYellow = 0xFF00FFFF;
 
-  static int PixelAt(const unsigned char *data, size_t rowbytes, size_t num_channels, int i, int j) {
+  static uint32_t PixelAt(const unsigned char *data, size_t rowbytes, size_t num_channels, int i, int j) {
     const unsigned char *offset_data = data + j * rowbytes + i * num_channels;
     uint32_t pixel = *(reinterpret_cast<const uint32_t *>(offset_data));
     if (3 == num_channels) {
       pixel &= 0x00FFFFFF;
       pixel |= 0xFF000000;
     }
-    return static_cast<int>(pixel);
+    return pixel;
   }
 
-  int IsAllOneColor(const unsigned char *data, size_t rowbytes, size_t num_channels) {
-    int first_pixel = PixelAt(data, rowbytes, num_channels, 0, 0);
+  size_t IsAllOneColor(const unsigned char *data, size_t rowbytes, size_t num_channels) {
+    uint32_t first_pixel = PixelAt(data, rowbytes, num_channels, 0, 0);
     switch(first_pixel) {
       case kRed:
       case kGreen:
       case kBlue:
         break;
-      default: return -1;
+      default:
+        return 0;
     }
 
     bool ok = true;
@@ -334,7 +335,7 @@ class Metadata12x12Texture : public Texture {
     if (ok) {
       return first_pixel;
     } else {
-      return -1;
+      return 0;
     }
   }
 
@@ -374,7 +375,7 @@ class Metadata12x12Texture : public Texture {
     bool ok = true;
     for (int j = 0; j < 12; ++j) {
       for (int i = 0; i < 12; ++i) {
-        int color = kYellow;
+        uint32_t color = kYellow;
 
         int di = i - offset_x;
         if (di < 0 || di > 8) {
@@ -404,21 +405,18 @@ class Metadata12x12Texture : public Texture {
   };
 
   EBlockType AnalyzeBlock(const unsigned char *data, size_t rowbytes, size_t num_channels) {
-    int color = IsAllOneColor(data, rowbytes, num_channels);
-    if (color >= 0) {
-      switch(color) {
+    uint32_t color = IsAllOneColor(data, rowbytes, num_channels);
+    switch(color) {
       case kRed: return eBlockType_12x12;
       case kGreen: return eBlockType_4x4;
       case kBlue: return eBlockType_6x6;
       default:
-        assert(false);
-      }
-
-      return eBlockType_4x4;
+        break;
     }
 
     int is8x8 = Is8x8(data, rowbytes, num_channels);
     if (is8x8 >= 0) {
+      assert(is8x8 < 4);
       return static_cast<EBlockType>(static_cast<int>(eBlockType_8x8_0) + is8x8);
     }
 
@@ -505,6 +503,10 @@ std::unique_ptr<Texture> Texture::Create(ETextureType type,
     std::cerr << "Error loading image: " << vis_filename << std::endl;
     exit(1);
   }
+
+  // Clamp width and height appropriately...
+  w = (w / 12) * 12;
+  h = (h / 12) * 12;
 
   switch (type) {
   case eTextureType_Adaptive4x4:
